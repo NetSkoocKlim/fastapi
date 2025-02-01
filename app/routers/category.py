@@ -6,6 +6,7 @@ from typing import Annotated
 from app.models import *
 from sqlalchemy import insert, select, update
 from app.schemas import CreateCategory
+from app.routers.auth import get_current_user
 
 from slugify import slugify
 
@@ -19,7 +20,11 @@ async def get_all_categories(db: Annotated[AsyncSession, Depends(get_db)]):
 
 
 @router.post('/create', status_code=status.HTTP_201_CREATED)
-async def create_category(db: Annotated[AsyncSession, Depends(get_db)], created_category: CreateCategory):
+async def create_category(db: Annotated[AsyncSession, Depends(get_db)], created_category: CreateCategory,
+                          user: Annotated[dict, Depends(get_current_user)]):
+    if not user.get('is_admin'):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN)
+
     await db.execute(insert(Category).values(name=created_category.name,
                                              parent_id=created_category.parent_id,
                                              slug=slugify(created_category.name)))
@@ -32,7 +37,10 @@ async def create_category(db: Annotated[AsyncSession, Depends(get_db)], created_
 
 @router.put('/update_category')
 async def update_category(db: Annotated[AsyncSession, Depends(get_db)], category_id: int,
-                          updated_category: CreateCategory):
+                          updated_category: CreateCategory, user: Annotated[dict, Depends(get_current_user)]):
+    if not user.get('is_admin'):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN)
+
     category = await db.scalar(select(Category).where(Category.id == category_id))
     if category is None:
         raise HTTPException(
@@ -53,7 +61,11 @@ async def update_category(db: Annotated[AsyncSession, Depends(get_db)], category
 
 
 @router.delete('/delete')
-async def delete_category(db: Annotated[AsyncSession, Depends(get_db)], category_id: int):
+async def delete_category(db: Annotated[AsyncSession, Depends(get_db)], category_id: int,
+                          user: Annotated[dict, Depends(get_current_user)]):
+    if not user.get('is_admin'):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN)
+
     category = await db.scalar(select(Category).where(Category.id == category_id))
     if category is None:
         raise HTTPException(
