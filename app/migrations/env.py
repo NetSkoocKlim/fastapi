@@ -18,7 +18,7 @@ if config.config_file_name is not None:
 
 # add your model's MetaData object here
 from app.backend.db import Base
-from app.models import category, products, user
+from app.models import category, products, user, reviews, ratings
 target_metadata = Base.metadata
 
 

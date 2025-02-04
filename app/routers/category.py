@@ -20,7 +20,8 @@ async def get_all_categories(db: Annotated[AsyncSession, Depends(get_db)]):
 
 
 @router.post('/create', status_code=status.HTTP_201_CREATED)
-async def create_category(db: Annotated[AsyncSession, Depends(get_db)], created_category: CreateCategory,
+async def create_category(db: Annotated[AsyncSession, Depends(get_db)],
+                          created_category: Annotated[CreateCategory, Depends(CreateCategory)],
                           user: Annotated[dict, Depends(get_current_user)]):
     if not user.get('is_admin'):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN)

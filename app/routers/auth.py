@@ -25,13 +25,46 @@ ALGORITHM = 'HS256'
 
 async def authenticate_user(db: Annotated[AsyncSession, Depends(get_db)], username: str, password: str):
     user = await db.scalar(select(User).where(User.username == username))
-    if not user or not bcrypt_context.verify(password, user.hashed_password) or user.is_active == False:
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found"
+        )
+    if not bcrypt_context.verify(password, user.hashed_password) or user.is_active == False:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid authentication credentials",
             headers={"WWW-Authenticate": "Bearer"},
         )
     return user
+
+
+@router.post('/', status_code=status.HTTP_201_CREATED)
+async def create_user(db: Annotated[AsyncSession, Depends(get_db)], created_user: CreateUser):
+    await db.execute(insert(User).values(first_name=created_user.first_name,
+                                         last_name=created_user.last_name,
+                                         username=created_user.username,
+                                         email=created_user.email,
+                                         hashed_password=bcrypt_context.hash(created_user.password),
+                                         ))
+    await db.commit()
+    return {
+        'status_code': status.HTTP_201_CREATED,
+        'transaction': 'Successful'
+    }
+
+
+@router.post('/token')
+async def login(db: Annotated[AsyncSession, Depends(get_db)], form_data: Annotated[OAuth2PasswordRequestForm, Depends()]):
+    print('f')
+    user = await authenticate_user(db, form_data.username, form_data.password)
+
+    token = await create_access_token(user.username, user.id, user.is_admin, user.is_supplier, user.is_customer,
+                                      expires_delta=timedelta(minutes=20))
+    return {
+        'access_token': token,
+        'token_type': 'bearer'
+    }
 
 
 async def create_access_token(username: str, user_id: int, is_admin: bool, is_supplier: bool, is_customer: bool,
@@ -72,33 +105,6 @@ async def get_current_user(token: Annotated[str, Depends(oauth2_scheme)]):
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail='Could not validate user'
         )
-
-
-@router.post('/', status_code=status.HTTP_201_CREATED)
-async def create_user(db: Annotated[AsyncSession, Depends(get_db)], created_user: CreateUser):
-    await db.execute(insert(User).values(first_name=created_user.first_name,
-                                         last_name=created_user.last_name,
-                                         username=created_user.username,
-                                         email=created_user.email,
-                                         hashed_password=bcrypt_context.hash(created_user.password),
-                                         ))
-    await db.commit()
-    return {
-        'status_code': status.HTTP_201_CREATED,
-        'transaction': 'Successful'
-    }
-
-
-@router.post('/token')
-async def login(db: Annotated[AsyncSession, Depends(get_db)], form_data: Annotated[OAuth2PasswordRequestForm, Depends()]):
-    user = await authenticate_user(db, form_data.username, form_data.password)
-
-    token = await create_access_token(user.username, user.id, user.is_admin, user.is_supplier, user.is_customer,
-                                      expires_delta=timedelta(minutes=20))
-    return {
-        'access_token': token,
-        'token_type': 'bearer'
-    }
 
 
 @router.get('/read_current_user')
