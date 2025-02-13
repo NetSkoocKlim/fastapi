@@ -12,7 +12,7 @@ class CreateProduct(BaseModel):
 
 class CreateCategory(BaseModel):
     name: str
-    parent_id: int | None = Field(default=None)
+    parent_id: int = Field(default=-1)
 
 
 class CreateUser(BaseModel):

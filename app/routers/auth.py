@@ -1,12 +1,10 @@
 from fastapi import APIRouter, Depends, status, HTTPException
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 
-from sqlalchemy import select, insert
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.user import User
 from app.schemas import CreateUser
-from app.backend.db_depends import get_db
+from app.dao import UserDAO
 
 from typing import Annotated
 
@@ -23,8 +21,8 @@ SECRET_KEY = 'a21679097c1ba42e9bd06eea239cdc5bf19b249e87698625cba5e3572f005544'
 ALGORITHM = 'HS256'
 
 
-async def authenticate_user(db: Annotated[AsyncSession, Depends(get_db)], username: str, password: str):
-    user = await db.scalar(select(User).where(User.username == username))
+async def authenticate_user(username: str, password: str):
+    user = await UserDAO.find_one_or_none(username=username)
     if not user:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -40,14 +38,12 @@ async def authenticate_user(db: Annotated[AsyncSession, Depends(get_db)], userna
 
 
 @router.post('/', status_code=status.HTTP_201_CREATED)
-async def create_user(db: Annotated[AsyncSession, Depends(get_db)], created_user: CreateUser):
-    await db.execute(insert(User).values(first_name=created_user.first_name,
-                                         last_name=created_user.last_name,
-                                         username=created_user.username,
-                                         email=created_user.email,
-                                         hashed_password=bcrypt_context.hash(created_user.password),
-                                         ))
-    await db.commit()
+async def create_user(created_user: CreateUser):
+    await UserDAO.add(first_name=created_user.first_name,
+                      last_name=created_user.last_name,
+                      username=created_user.username,
+                      email=created_user.email,
+                      hashed_password=bcrypt_context.hash(created_user.password))
     return {
         'status_code': status.HTTP_201_CREATED,
         'transaction': 'Successful'
@@ -55,9 +51,8 @@ async def create_user(db: Annotated[AsyncSession, Depends(get_db)], created_user
 
 
 @router.post('/token')
-async def login(db: Annotated[AsyncSession, Depends(get_db)], form_data: Annotated[OAuth2PasswordRequestForm, Depends()]):
-    print('f')
-    user = await authenticate_user(db, form_data.username, form_data.password)
+async def login(form_data: Annotated[OAuth2PasswordRequestForm, Depends()]):
+    user = await authenticate_user(form_data.username, form_data.password)
 
     token = await create_access_token(user.username, user.id, user.is_admin, user.is_supplier, user.is_customer,
                                       expires_delta=timedelta(minutes=20))
@@ -69,9 +64,9 @@ async def login(db: Annotated[AsyncSession, Depends(get_db)], form_data: Annotat
 
 async def create_access_token(username: str, user_id: int, is_admin: bool, is_supplier: bool, is_customer: bool,
                               expires_delta: timedelta):
-    encode = {'sub': username, 'id': user_id, 'is_admin': is_admin, 'is_supplier': is_supplier,
-              'is_customer': is_customer, 'exp': datetime.now() + expires_delta}
-    return jwt.encode(encode, SECRET_KEY, algorithm=ALGORITHM)
+    to_encode = {'sub': username, 'id': user_id, 'is_admin': is_admin, 'is_supplier': is_supplier,
+                 'is_customer': is_customer, 'exp': datetime.now() + expires_delta}
+    return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
 
 async def get_current_user(token: Annotated[str, Depends(oauth2_scheme)]):
@@ -110,11 +105,3 @@ async def get_current_user(token: Annotated[str, Depends(oauth2_scheme)]):
 @router.get('/read_current_user')
 async def read_current_user(user: User = Depends(get_current_user)):
     return {'User': user}
-
-
-
-
-
-
-
-
