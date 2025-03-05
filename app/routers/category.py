@@ -1,8 +1,8 @@
 from fastapi import APIRouter, Depends, status, HTTPException
-from typing import Annotated
+from typing import Annotated, List
 
 from app.models import *
-from app.schemas import CreateCategory
+from app.schemas import SCategory
 from app.routers.auth import get_current_user
 from app.dao import CategoryDAO
 
@@ -11,13 +11,13 @@ from slugify import slugify
 router = APIRouter(prefix='/category', tags=['category'])
 
 
-@router.get('/all_categories')
+@router.get('/all_categories', response_model=list[SCategory])
 async def get_all_categories():
     return await CategoryDAO.find_all(filters=[Category.is_active])
 
 
 @router.post('/create', status_code=status.HTTP_201_CREATED)
-async def create_category(created_category: Annotated[CreateCategory, Depends(CreateCategory)],
+async def create_category(created_category: SCategory,
                           user: Annotated[dict, Depends(get_current_user)]):
     if not user.get('is_admin'):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN)
@@ -33,7 +33,7 @@ async def create_category(created_category: Annotated[CreateCategory, Depends(Cr
 
 @router.put('/update_category')
 async def update_category(category_id: int,
-                          updated_category: CreateCategory,
+                          updated_category: SCategory,
                           user: Annotated[dict, Depends(get_current_user)]):
     if not user.get('is_admin'):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN)

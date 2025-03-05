@@ -1,10 +1,23 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>$Title$</title>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Document</title>
 </head>
 <body>
-$END$
+<div>
+    {% for category in categories %}
+    <div style="display: flex; margin-bottom: 15px; margin-left: 300px">
+        <img src="{{ url_for('static', path='images/not found.webp') }}" alt="Фото категории" width="300">
+        <div>
+            <h1>{{ category.name }}</h1>
+            <h4>{{ category.slug }}</h4>
+        </div>
+    </div>
+    {% endfor %}
+</div>
 </body>
 </html>

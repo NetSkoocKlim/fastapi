@@ -2,7 +2,7 @@ import datetime
 
 from fastapi import APIRouter, Depends, status, HTTPException
 from app.models import Review, Rating, Product
-from app.schemas import CreateReview
+from app.schemas import SReview
 from app.routers.auth import get_current_user
 from app.dao import ReviewDAO, ProductDAO
 
@@ -22,7 +22,7 @@ async def get_product_reviews(product_id: int):
 
 
 @router.post('/add_review')
-async def post_review(review: Annotated[CreateReview, Depends()],
+async def post_review(review: Annotated[SReview, Depends()],
                       user: Annotated[dict, Depends(get_current_user)]):
     await ReviewDAO.add(user_id=user.get('id'),
                         product_id=review.product_id,

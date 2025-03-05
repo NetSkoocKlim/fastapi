@@ -3,7 +3,7 @@ from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 
 
 from app.models.user import User
-from app.schemas import CreateUser
+from app.schemas import SUser
 from app.dao import UserDAO
 
 from typing import Annotated
@@ -12,13 +12,11 @@ from passlib.context import CryptContext
 
 from datetime import datetime, timedelta
 from jose import jwt, JWTError
+from app.config import settings
 
 router = APIRouter(prefix='/auth', tags=['auth'])
 bcrypt_context = CryptContext(schemes=['bcrypt'], deprecated='auto')
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/token")
-
-SECRET_KEY = 'a21679097c1ba42e9bd06eea239cdc5bf19b249e87698625cba5e3572f005544'
-ALGORITHM = 'HS256'
 
 
 async def authenticate_user(username: str, password: str):
@@ -38,7 +36,7 @@ async def authenticate_user(username: str, password: str):
 
 
 @router.post('/', status_code=status.HTTP_201_CREATED)
-async def create_user(created_user: CreateUser):
+async def create_user(created_user: SUser):
     await UserDAO.add(first_name=created_user.first_name,
                       last_name=created_user.last_name,
                       username=created_user.username,
@@ -66,12 +64,12 @@ async def create_access_token(username: str, user_id: int, is_admin: bool, is_su
                               expires_delta: timedelta):
     to_encode = {'sub': username, 'id': user_id, 'is_admin': is_admin, 'is_supplier': is_supplier,
                  'is_customer': is_customer, 'exp': datetime.now() + expires_delta}
-    return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    return jwt.encode(to_encode, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
 
 
 async def get_current_user(token: Annotated[str, Depends(oauth2_scheme)]):
     try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        payload = jwt.decode(token, settings.JWT_SECRET_KEY, algorithms=[settings.JWT_ALGORITHM])
         if (username := payload.get('sub')) is None or (user_id := payload.get('id')) is None:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,

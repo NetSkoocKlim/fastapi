@@ -1,7 +1,7 @@
 from pydantic import BaseModel, Field
 
 
-class CreateProduct(BaseModel):
+class SProduct(BaseModel):
     name: str
     description: str
     price: int
@@ -9,13 +9,15 @@ class CreateProduct(BaseModel):
     stock: int
     category_id: int
 
+    
 
-class CreateCategory(BaseModel):
+
+class SCategory(BaseModel):
     name: str
     parent_id: int = Field(default=-1)
 
 
-class CreateUser(BaseModel):
+class SUser(BaseModel):
     first_name: str
     last_name: str
     username: str
@@ -23,7 +25,7 @@ class CreateUser(BaseModel):
     password: str
 
 
-class CreateReview(BaseModel):
+class SReview(BaseModel):
     product_id: int
     grade: int
     comment: str

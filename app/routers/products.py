@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 from typing import Annotated
-from app.schemas import CreateProduct
+from app.schemas import SProduct
 from fastapi import status, Depends, HTTPException
 from app.models import Product
 from app.routers.auth import get_current_user
@@ -13,7 +13,7 @@ router = APIRouter(prefix='/products', tags=['products'])
 @router.get('/')
 async def all_products():
     products = await ProductDAO.find_all(filters=[Product.stock > 0,
-                                                  Product.is_active])  # await db.scalars(select(Product).where(Product.stock > 0, Product.is_active))
+                                                  Product.is_active])
     if products:
         return products
     raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Products not found")
@@ -21,7 +21,7 @@ async def all_products():
 
 @router.post('/create', status_code=status.HTTP_201_CREATED)
 async def create_product(
-        created_product: Annotated[Product, Depends(CreateProduct)],
+        created_product: Annotated[Product, Depends(SProduct)],
         user: Annotated[dict, Depends(get_current_user)]):
     if not user.get('is_admin') or not user.get('is_supplier'):
         raise HTTPException(status_code=status.HTTP_405_METHOD_NOT_ALLOWED,
@@ -70,7 +70,7 @@ async def product_detail(product_slug: str):
 
 @router.put('/detail/{product_slug}')
 async def update_product(product_slug: str,
-                         updated_product: Annotated[Product, Depends(CreateProduct)],
+                         updated_product: Annotated[Product, Depends(SProduct)],
                          user: Annotated[dict, Depends(get_current_user)]):
     product = await ProductDAO.find_one_or_none(slug=product_slug)
     if product is None:
